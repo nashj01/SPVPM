@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+  <geometry>
+
+    <slat>
+      <foil>NACA0012</foil>
+      <panels>10</panels>
+      <chord>0.2</chord>
+      <camber>0.08</camber>
+      <camberpos>0.4</camberpos>
+      <thick>0.25</thick>
+      <angle>-35</angle>
+      <Xgap>0</Xgap>
+      <Zgap>0</Zgap>
+    </slat>
+
+    <wing>
+      <foil>NACA2412</foil>
+      <panels>50</panels>
+      <chord>1</chord>
+      <camber>0.02</camber>
+      <camberpos>0.4</camberpos>
+      <thick>0.12</thick>
+      <angle>10</angle>
+      <Xgap>-0.1</Xgap>
+      <Zgap>0</Zgap>
+    </wing>
+
+    <flap>
+      <foil>NACA0012</foil>
+      <panels>20</panels>
+      <chord>0.15</chord>
+      <camber>0.02</camber>
+      <camberpos>0.4</camberpos>
+      <thick>0.15</thick>
+      <angle>20</angle>
+      <Xgap>0.03</Xgap>
+      <Zgap>0</Zgap>
+    </flap>
+
+    <flap>
+      <foil>NACA0012</foil>
+      <panels>20</panels>
+      <chord>0.15</chord>
+      <camber>0.02</camber>
+      <camberpos>0.4</camberpos>
+      <thick>0.15</thick>
+      <angle>30</angle>
+      <Xgap>0.025</Xgap>
+      <Zgap>-0.07</Zgap>
+    </flap>
+
+  </geometry>
+
+  <flow>
+    <velocity>20</velocity>
+    <density>1.225</density>
+    <viscosity>1.4207e-5</viscosity>
+    <boundary>1</boundary>
+  </flow>
+</config>
+
+

@@ -11,11 +11,12 @@
 #
 import numpy as np
 import math as math
-# %% COMPUTE FOIL GEOMETRY
+
+# %% COMPUTE FOIL BOUNDARY POINTS
 #
 #
 
-def FOIL(nx, c, m, p, t, alpha, Xgap, Zgap, offset, deltaB, deltaC):
+def BOUNDPTS(alpha, nx, c, m, p, t, Xgap, Zgap, offset):
    
     x = (1-np.cos(np.linspace(0, np.pi, nx)))/2
    
@@ -38,66 +39,181 @@ def FOIL(nx, c, m, p, t, alpha, Xgap, Zgap, offset, deltaB, deltaC):
     # UPPER AND LOWER SURFACE DEFINITION
     Xu = x - Zt*np.sin(theta)
     Xl = x + Zt*np.sin(theta)
-    XB = c*np.concatenate((np.flip(Xl[1:len(Xl)]), Xu))
-   
     Zu = Zcamb + Zt*np.cos(theta)
     Zl = Zcamb - Zt*np.cos(theta)
+    
+    # Evaluation of the boundary points
+    XB = c*np.concatenate((np.flip(Xl[1:len(Xl)]), Xu))
     ZB = np.concatenate((np.flip(Zl[1:len(Zl)]), Zu)) 
-    
-    # PREALLOCATION
-    XC = np.zeros(2*nx-2)
-    ZC = np.zeros(2*nx-2)
-    beta = np.zeros(2*nx-2)
-    phi = np.zeros(2*nx-2)
-    S = np.zeros(2*nx-2)
-    dx = np.zeros(2*nx-2)
-    dz = np.zeros(2*nx-2)
-    
-    # COLLOCATION POINTS AND PANEL ORIENTATIONS
-    for i in range(2*nx-2):
-        XC[i] = (XB[i] + XB[i+1])/2
-        ZC[i] = (ZB[i] + ZB[i+1])/2
-        dx[i]      = XB[i+1]-XB[i]                                                     # Change in X between boundary points
-        dz[i]      = ZB[i+1]-ZB[i]                                                     # Change in Y between boundary points
-        S[i]    = (dx[i]**2 + dz[i]**2)**0.5                                              # Length of the panel
-        phi[i]  = math.atan2(dz[i],dx[i])                                                 # Angle of panel (positive X-axis to inside face)
-        if (phi[i] < 0):                                                            # Make all panel angles positive [rad]
-            phi[i] = phi[i] + 2*np.pi
-    
-    beta = ((phi + (np.pi/2)) - alpha)                                          # Angle of panel normal [rad]
-    beta[beta > 2*np.pi] = beta[beta > 2*np.pi] - 2*np.pi                           # Make all panel angles between 0 and 2pi [rad]
-    
-    # Compute the boundary layer panel boundary points and panel collocation points
-    DXC = np.diff(XC)
-    DZC = np.diff(ZC)
-    
-    DXB = np.diff(XB)
-    DZB = np.diff(ZB)
-    
-    normC = np.sqrt(DXC**2 + DZC**2)
-    normB = np.sqrt(DXB**2 + DZB**2)
-    
-    NXC = np.concatenate(([DZC[0]], DZC / normC))
-    NZC = np.concatenate(([-DXC[0]], DXC / normC)) 
-    NXB = np.concatenate(([DZB[0]], DZB / normB))
-    NZB = np.concatenate(([-DXB[0]], DXB / normB)) 
-    
-    XC = XC - deltaC*NXC + offset + Xgap
-    ZC = ZC + deltaC*NZC + Zgap
-    XB = XB - deltaB*NXB + offset + Xgap
-    ZB = ZB + deltaB*NZB + Zgap
+    XB = ((XB)*np.cos(-alpha) - (ZB)*np.sin(-alpha))
+    ZB = ((XB)*np.sin(-alpha) + (ZB)*np.cos(-alpha))
+    XB = XB + offset + Xgap
+    ZB = ZB + Zgap
     
     # Compute the chord 
-    Xchord = np.linspace(0, c, 2*nx-2) + offset + Xgap
-    Zchord = np.zeros(2*nx-2) + Zgap
+    Xchord = np.linspace(0, c, 2*nx-1) 
+    Zchord = np.zeros(2*nx-1)
+    Xchord = ((Xchord)*np.cos(-alpha) - (Zchord)*np.sin(-alpha))
+    Zchord = ((Xchord)*np.sin(-alpha) + (Zchord)*np.cos(-alpha))
+    Xchord = Xchord + offset + Xgap
+    Zchord = Zchord + Zgap
+
     
     # Compute the camber
-    Xcamb = Xcamb + offset + Xgap
+    
+    Xcamb = ((Xcamb)*np.cos(-alpha) - (Zcamb)*np.sin(-alpha))
+    Zcamb = ((Xcamb)*np.sin(-alpha) + (Zcamb)*np.cos(-alpha))
+    Xcamb= Xcamb + offset + Xgap
     Zcamb = Zcamb + Zgap
 
     # Compute the offset for next foil
     offset = XB[0]
     
-    return XB, ZB, XC, ZC, Xchord, Zchord, Xcamb, Zcamb, offset, alpha, beta, phi, S
+    return XB, ZB, Xchord, Zchord, Xcamb, Zcamb, offset
+
+# %% COMPUTE FOIL CONTROL POINTS
+#
+#
+
+def COLLOPTS(multi):
+    
+    # Preallocation
+    XB = multi["XB"]
+    ZB = multi["ZB"]
+    XC = np.zeros(len(multi["XB"])-1)
+    ZC = np.zeros(len(multi["XB"])-1)
+    beta = np.zeros(len(multi["XB"])-1)
+    phi = np.zeros(len(multi["XB"])-1)
+    S = np.zeros(len(multi["XB"])-1)
+    dx = np.zeros(len(multi["XB"])-1)
+    dz = np.zeros(len(multi["XB"])-1)
+    
+    
+    # Collocation points and panel orientations
+    for j in range(len(XB)-1):
+        XC[j] = (XB[j] + XB[j+1])/2
+        ZC[j] = (ZB[j] + ZB[j+1])/2
+        dx[j] = XB[j+1]-XB[j]                                                     
+        dz[j] = ZB[j+1]-ZB[j]                                                    
+        S[j] = (dx[j]**2 + dz[j]**2)**0.5                                              
+        phi[j] = math.atan2(dz[j],dx[j])                                              
+        if (phi[j] < 0):                                                        
+            phi[j] = phi[j] + 2*np.pi
+    
+    
+        beta = ((phi + (np.pi/2)) - 2*multi["alpha"])                                          
+        beta[beta > 2*np.pi] = beta[beta > 2*np.pi] - 2*np.pi  
+    
+    return XC, ZC, S, beta, phi
 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    
+#     # Compute the boundary layer panel boundary points and panel collocation points
+#     DXC = np.diff(XC)
+#     DZC = np.diff(ZC)
+    
+#     DXB = np.diff(XB)
+#     DZB = np.diff(ZB)
+    
+#     normC = np.sqrt(DXC**2 + DZC**2)
+#     normB = np.sqrt(DXB**2 + DZB**2)
+    
+#     NXC = np.concatenate(([DZC[0]], DZC / normC))
+#     NZC = np.concatenate(([-DXC[0]], DXC / normC)) 
+#     NXB = np.concatenate(([DZB[0]], DZB / normB))
+#     NZB = np.concatenate(([-DXB[0]], DXB / normB)) 
+    
+#     XC = XC - deltaC*NXC + offset + Xgap
+#     ZC = ZC + deltaC*NZC + Zgap
+#     XB = XB - deltaB*NXB + offset + Xgap
+#     ZB = ZB + deltaB*NZB + Zgap
+    
+#     # Compute the chord 
+#     Xchord = np.linspace(0, c, 2*nx-2) + offset + Xgap
+#     Zchord = np.zeros(2*nx-2) + Zgap
+    
+#     # Compute the camber
+#     Xcamb = Xcamb + offset + Xgap
+#     Zcamb = Zcamb + Zgap
+
+#     # Compute the offset for next foil
+#     offset = XB[0]
+    
+#     return XB, ZB, XC, ZC, Xchord, Zchord, Xcamb, Zcamb, offset, alpha, beta, phi, S
